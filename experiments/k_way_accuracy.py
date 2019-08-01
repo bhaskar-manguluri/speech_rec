@@ -46,7 +46,7 @@ siamese = load_model(siamese_model_path)
 classifier = load_model(classifier_model_path)
 
 with open(results_path, 'w') as f:
-    print >>f, 'method,n_correct,n_tasks,n_shot,k_way'
+    print(>>f, 'method,n_correct,n_tasks,n_shot,k_way')
 
 results = []
 for k in k_way:

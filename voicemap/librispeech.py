@@ -67,7 +67,8 @@ class LibriSpeechDataset(Sequence):
             )
 
             audio_files = []
-            for subset, found in found_cache.iteritems():
+            #for subset, found in found_cache.iteritems():
+            for subset, found in found_cache.items():
                 if not found:
                     audio_files += self.index_subset(subset)
 
@@ -150,7 +151,7 @@ class LibriSpeechDataset(Sequence):
             on='speaker_id'
         ).sample(num_pairs)[['speaker_id', 'id_x', 'id_y']]
 
-        alike_pairs = zip(alike_pairs['id_x'].values, alike_pairs['id_y'].values)
+        alike_pairs = list(zip(alike_pairs['id_x'].values, alike_pairs['id_y'].values))
 
         return alike_pairs
 
@@ -162,7 +163,7 @@ class LibriSpeechDataset(Sequence):
         random_sample_from_other_speakers = self.df[~self.df['speaker_id'].isin(
             random_sample['speaker_id'])].sample(num_pairs, weights='length')
 
-        differing_pairs = zip(random_sample['id'].values, random_sample_from_other_speakers['id'].values)
+        differing_pairs = list(zip(random_sample['id'].values, random_sample_from_other_speakers['id'].values))
 
         return differing_pairs
 
@@ -176,29 +177,29 @@ class LibriSpeechDataset(Sequence):
         :return: Inputs for both sides of the siamese network and outputs indicating whether they are from the same
         speaker or not.
         """
-        alike_pairs = self.get_alike_pairs(batchsize / 2)
+        alike_pairs = self.get_alike_pairs(batchsize // 2)
 
         # Take only the instances not labels and stack to form a batch of pairs of instances from the same speaker
-        input_1_alike = np.stack([self[i][0] for i in zip(*alike_pairs)[0]])
-        input_2_alike = np.stack([self[i][0] for i in zip(*alike_pairs)[1]])
+        input_1_alike = np.stack([self[i][0] for i in list(zip(*alike_pairs))[0]])
+        input_2_alike = np.stack([self[i][0] for i in list(zip(*alike_pairs))[1]])
 
-        differing_pairs = self.get_differing_pairs(batchsize / 2)
+        differing_pairs = self.get_differing_pairs(batchsize // 2)
 
         # Take only the instances not labels and stack to form a batch of pairs of instances from different speakers
-        input_1_different = np.stack([self[i][0] for i in zip(*differing_pairs)[0]])
-        input_2_different = np.stack([self[i][0] for i in zip(*differing_pairs)[1]])
+        input_1_different = np.stack([self[i][0] for i in list(zip(*differing_pairs))[0]])
+        input_2_different = np.stack([self[i][0] for i in list(zip(*differing_pairs))[1]])
 
         input_1 = np.vstack([input_1_alike, input_1_different])[:, :, np.newaxis]
         input_2 = np.vstack([input_2_alike, input_2_different])[:, :, np.newaxis]
 
-        outputs = np.append(np.zeros(batchsize/2), np.ones(batchsize/2))[:, np.newaxis]
+        outputs = np.append(np.zeros(batchsize//2), np.ones(batchsize//2))[:, np.newaxis]
 
         return [input_1, input_2], outputs
 
     def yield_verification_batches(self, batchsize):
         """Convenience function to yield verification batches forever."""
         while True:
-            ([input_1, input_2], labels) = self.build_verification_batch(batchsize)
+            ([input_1, input_2], labels) = self.build_verification_batch(int(batchsize))
             yield ([input_1, input_2], labels)
 
     def build_n_shot_task(self, k, n=1):
